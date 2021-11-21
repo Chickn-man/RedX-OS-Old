@@ -1,2 +1,2 @@
 # Zero
-crappy os
+crappy OS (thing that im calling an os)
