@@ -1,8 +1,9 @@
 # RedX
 crappy OS (thing that im calling an os)
+<br>
 Some of the code isnt mine
-<br/>
-<br/>
+<br>
+<br>
 ## To build from src
 qemu is needed for running
 ### Linux
