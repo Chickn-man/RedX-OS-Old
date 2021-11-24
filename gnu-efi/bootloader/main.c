@@ -12,6 +12,10 @@ typedef struct {
   unsigned int ppsl; //Pixels per scan line
 } Framebuffer;
 
+double sqrt(double number);
+int roundd(double x);
+void cls(Framebuffer* buffer, unsigned int BPP);
+
 Framebuffer framebuffer;
 Framebuffer* GOPInit() {
   EFI_GUID gopGuid = EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID;
@@ -139,8 +143,64 @@ EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable) {
   newBuffer->ppsl
   );
 
+  cls(newBuffer, 4);
+  
   //jump to kernel
   KernelMain(newBuffer);
   
   return EFI_SUCCESS;  // Exit the UEFI application
+}
+
+void plotPixel(Framebuffer* buffer, unsigned int BPP, unsigned int x, unsigned int y, unsigned int color) {
+  *(unsigned int*)(x * BPP + (y * buffer->ppsl * BPP) + buffer->BaseAddr) = color;
+}
+
+void drawLine(Framebuffer* buffer, unsigned int BPP, unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y2, unsigned int color) {
+  int a = y2 - y1;
+  int b = x2 - x1;
+  int length = sqrt(b *  b + a * a);
+  for (double i = 0; i < roundd(length * 2); i++) {
+    plotPixel(buffer, BPP,
+      x1 + roundd(b * (i / roundd(length * 2))),
+      y1 + roundd(a * (i / roundd(length * 2))),
+      color);
+  }
+}
+
+void cls(Framebuffer* buffer, unsigned int BPP) {
+  for (unsigned int x = 0; x < buffer->Width; x++) {
+    for (unsigned int y = 0; y < buffer->Height; y++) {
+      plotPixel(buffer, BPP, x, y, 0x00000000);
+    }
+  }
+}
+
+void rect(Framebuffer* buffer, unsigned int BPP,  unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y2, unsigned int color) {
+  for (unsigned int x = x1; x <= x2; x++) {
+    for (unsigned int y = y1; y <= y2; y++) {
+      plotPixel(buffer, BPP, x, y, color);
+    }
+  }
+}
+double sqrt(double number) {
+  double temp = 0;
+  double root = number / 2;
+  int i = 0;
+  while (root != temp && i < 10000) {
+    temp = root;
+    root = (number / temp + temp) / 2;
+    i++;
+  }
+  return root;
+}
+
+double rand() {
+  return 0;
+}
+
+int roundd(double x) {
+    if (x < 0.0)
+        return (int)(x - 0.5);
+    else
+        return (int)(x + 0.5);
 }
