@@ -25,7 +25,7 @@ kernel: $(OBJS) link
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	@ echo !==== COMPILING $^
 	@ mkdir -p $(@D)
-	$(CC) $(CFLAGS) -c $^ -o $@
+	$(CC) $(CFLAGS) -c $^ -o $@ -lm
 
 link:
 	@ echo !==== LINKING $^
