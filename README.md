@@ -7,7 +7,9 @@ Some of the code isnt mine
 ## To build from src
 qemu is needed for running
 ### Linux
-extract src and cd into RedX dir.
+extract src and cd into RedX dir.<br>
+cd into kernel and run make setup.<br>
+cd back into root.<br>
 "./run" to run
 <br/>
 ### Windows
