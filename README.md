@@ -13,4 +13,4 @@ cd back into root.<br>
 "./run" to run
 <br/>
 ### Windows
-Download wsl and follow linux instructions but instead of "./run" run "run.bat" in /kernel
+Download wsl and follow linux instructions but then run "run.bat" in /kerne
