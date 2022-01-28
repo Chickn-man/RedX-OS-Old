@@ -38,6 +38,7 @@ setup:
 	@mkdir $(OBJDIR)
 
 buildimg:
+	touch $(BUILDDIR)/$(OSNAME).img
 	rm $(BUILDDIR)/$(OSNAME).img
 	dd if=/dev/zero of=$(BUILDDIR)/$(OSNAME).img bs=512 count=93750
 	mformat -i $(BUILDDIR)/$(OSNAME).img
