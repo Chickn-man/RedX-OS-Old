@@ -7,9 +7,9 @@ Some of the code isnt mine
 ## To build from src
 qemu is needed for running
 ### Linux
-git clone https://github.com/Chickn-man/RedX-OS.<br>
-cd RedX-OS.<br>
-chmod +x run.<br>
+git clone https://github.com/Chickn-man/RedX-OS<br>
+cd RedX-OS<br>
+chmod +x run<br>
 ./run
 <br/>
 ### Windows
