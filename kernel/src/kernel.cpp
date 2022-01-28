@@ -29,14 +29,13 @@ typedef struct {
 
 double sqrt(double number);
 int roundd(double x);
-void cls(Framebuffer* buffer, unsigned int BPP);
-void drawLine(Framebuffer* buffer, unsigned int BPP, unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y2, unsigned int color);
+void cls(Framebuffer* buffer);
+void drawLine(Framebuffer* buffer,  unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y2, unsigned int color);
 void printChar(Framebuffer* buffer, PSF_FONT* font, char chr, unsigned int x, unsigned int y, unsigned int color);
 void printString(Framebuffer* buffer, PSF_FONT* font, Cursor* cursor, const char* str, unsigned int color);
 extern "C" void main(Framebuffer* framebuffer, PSF_FONT* font) {
   
   /* init */
-  unsigned int BytesPerPixel = framebuffer->Size / (framebuffer->ppsl * framebuffer->Height);
   const unsigned int colors[] = {
     0xffff0000,
     0xffffc000,
@@ -55,8 +54,8 @@ extern "C" void main(Framebuffer* framebuffer, PSF_FONT* font) {
   
   // RedX
   double xsize = 0.40;
-  drawLine(framebuffer, BytesPerPixel, framebuffer->Width / 2 - framebuffer->Height * xsize, framebuffer->Height / 2 - framebuffer->Height * xsize, framebuffer->Width / 2 + framebuffer->Height * xsize, framebuffer->Height / 2 + framebuffer->Height * xsize, colors[0]);
-  drawLine(framebuffer, BytesPerPixel, framebuffer->Width / 2 - framebuffer->Height * xsize, framebuffer->Height / 2 + framebuffer->Height * xsize, framebuffer->Width / 2 + framebuffer->Height * xsize, framebuffer->Height / 2 - framebuffer->Height * xsize, colors[0]);
+  drawLine(framebuffer, framebuffer->Width / 2 - framebuffer->Height * xsize, framebuffer->Height / 2 - framebuffer->Height * xsize, framebuffer->Width / 2 + framebuffer->Height * xsize, framebuffer->Height / 2 + framebuffer->Height * xsize, colors[0]);
+  drawLine(framebuffer, framebuffer->Width / 2 - framebuffer->Height * xsize, framebuffer->Height / 2 + framebuffer->Height * xsize, framebuffer->Width / 2 + framebuffer->Height * xsize, framebuffer->Height / 2 - framebuffer->Height * xsize, colors[0]);
   
   printString(framebuffer, font, cur, "RedX OS", colors[0]);
   //cls(framebuffer, BytesPerPixel);
@@ -72,44 +71,46 @@ extern "C" void main(Framebuffer* framebuffer, PSF_FONT* font) {
 /*
 ** Plots a pixel at x, y.
 ** buffer is GOP frame buffer.
-** BPP is bytes Per Pixel.
+** 4 is bytes Per Pixel.
 ** Color is argb hex value.. (  aarrggbb)
 **                           (0x00000000)
 */
-void plotPixel(Framebuffer* buffer, unsigned int BPP, unsigned int x, unsigned int y, unsigned int color ) {
-  if ((x * BPP + (y * buffer->ppsl * BPP) + (char*)buffer->BaseAddr) < (char*)buffer->BaseAddr + buffer->Size) { 
-    *(unsigned int*)(x * BPP + (y * buffer->ppsl * BPP) + (char*)buffer->BaseAddr) = color;
+void plotPixel(Framebuffer* buffer, unsigned int x, unsigned int y, unsigned int color ) {
+  if ((x * 4 + (y * buffer->ppsl * 4) + (char*)buffer->BaseAddr) < (char*)buffer->BaseAddr + buffer->Size) { 
+    *(unsigned int*)(x * 4 + (y * buffer->ppsl * 4) + (char*)buffer->BaseAddr) = color;
   }
 }
 
 /*
 ** Draws a line from x1, y1 to x2, y2.
 ** buffer is GOP frame buffer.
-** BPP is bytes Per Pixel.
+** 4 is bytes Per Pixel.
 ** Color is argb hex value.. (  aarrggbb)
 **                           (0x00000000)
 */
-void drawLine(Framebuffer* buffer, unsigned int BPP, unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y2, unsigned int color) {
+void drawLine(Framebuffer* buffer,  unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y2, unsigned int color) {
   int a = y2 - y1;
   int b = x2 - x1;
   int length = sqrt(b *  b + a * a);
   for (double i = 0; i < roundd(length * 2); i++) {
-    plotPixel(buffer, BPP,
+    plotPixel(buffer,
       x1 + roundd(b * (i / roundd(length * 2))),
       y1 + roundd(a * (i / roundd(length * 2))),
       color);
   }
 }
 
-/*
-** Clears the screen.
+/*you can!!!!!...
+
+Show More
+
 ** buffer is GOP frame buffer.
-** BPP is bytes Per Pixel.
+** 4 is bytes Per Pixel.
 */
-void cls(Framebuffer* buffer, unsigned int BPP) {
+void cls(Framebuffer* buffer) {
   for (int x = 0; x < buffer->Width; x++) {
     for (int y = 0; y < buffer->Height; y++) {
-      plotPixel(buffer, BPP, x, y, 0x00ff0000);
+      plotPixel(buffer, x, y, 0x00ff0000);
     }
   }
 }
@@ -117,14 +118,14 @@ void cls(Framebuffer* buffer, unsigned int BPP) {
 /*
 ** Draws a solid rectangle from x1, y1 to x2, y2.
 ** buffer is GOP frame buffer.
-** BPP is bytes Per Pixel.
+** 4 is bytes Per Pixel.
 ** Color is argb hex value. (  aarrggbb)
 **                          (0x00000000)
 */
-void rect(Framebuffer* buffer, unsigned int BPP,  unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y2, unsigned int color) {
+void rect(Framebuffer* buffer,   unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y2, unsigned int color) {
   for (int x = x1; x <= x2; x++) {
     for (int y = y1; y <= y2; y++) {
-      plotPixel(buffer, BPP, x, y, color);
+      plotPixel(buffer, x, y, color);
     }
   }
 }
@@ -141,7 +142,7 @@ void printChar(Framebuffer* buffer, PSF_FONT* font, char chr, unsigned int x, un
   for (unsigned long u = y; u < y + 16; u++) {
     for (unsigned long c = x; c < x + 8; c++) {
       if ((*fontPtr & (0b10000000 >> (c - x))) > 0) {
-        plotPixel(buffer, 4, c, u, color);
+        plotPixel(buffer, c, u, color);
       }
     }
     fontPtr++;
