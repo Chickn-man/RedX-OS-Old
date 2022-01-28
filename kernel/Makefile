@@ -33,9 +33,9 @@ link:
 	$(LD) $(LDFLAGS) -o $(BUILDDIR)/kernel $(OBJS)
 
 setup:
-	@mkdir $(BUILDDIR)
-	@mkdir $(SRCDIR)
-	@mkdir $(OBJDIR)
+	@mkdir -p $(BUILDDIR)
+	@mkdir -p $(SRCDIR)
+	@mkdir -p $(OBJDIR)
 
 buildimg:
 	touch $(BUILDDIR)/$(OSNAME).img
