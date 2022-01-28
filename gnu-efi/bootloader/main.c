@@ -12,9 +12,57 @@ typedef struct {
   unsigned int ppsl; //Pixels per scan line
 } Framebuffer;
 
+#define PSF_MAGIC0 0x36
+#define PSF_MAGIC1 0x04
+
+typedef struct {
+  unsigned char magic[2];
+  unsigned char mode;
+  unsigned char charsize;
+} PSF_HEADER;
+
+typedef struct {
+  PSF_HEADER* header;
+  void* buffer;
+} PSF_FONT;
+
 double sqrt(double number);
 int roundd(double x);
 void cls(Framebuffer* buffer, unsigned int BPP);
+EFI_FILE* loadFile(EFI_FILE* Directory, CHAR16* Path, EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable);
+
+PSF_FONT* loadPSFFont(EFI_FILE* Directory, CHAR16* Path, EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable) {
+  EFI_FILE* font = loadFile(Directory, Path, ImageHandle, SystemTable);
+  if (font == NULL) return NULL;
+
+  PSF_HEADER* header;
+  SystemTable->BootServices->AllocatePool(EfiLoaderData, sizeof(PSF_HEADER), (void**)&header);
+  UINTN size = sizeof(PSF_HEADER);
+  font->Read(font, &size, header);
+
+  if (header->magic[0] != PSF_MAGIC0 || header->magic[1] != PSF_MAGIC1) {
+    return NULL;
+  }
+
+  UINTN bufferSize = header->charsize * 256;
+  if (header->mode == 1) { // 512 glyph mode
+    bufferSize = header->charsize * 512;
+  }
+
+  void* buffer; {
+    font->SetPosition(font, sizeof(PSF_HEADER));
+    SystemTable->BootServices->AllocatePool(EfiLoaderData, bufferSize, (void**)&buffer);
+    font->Read(font, &bufferSize, buffer);
+  }
+  
+  PSF_FONT* finalFont;
+  SystemTable->BootServices->AllocatePool(EfiLoaderData, sizeof(PSF_FONT), (void**)&finalFont);
+
+  finalFont->header = header;
+  finalFont->buffer = buffer;
+  return finalFont;
+
+}
 
 Framebuffer framebuffer;
 Framebuffer* GOPInit() {
@@ -129,32 +177,53 @@ EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable) {
       }
     }
   }
-  void (*KernelMain)(Framebuffer* ) = ((__attribute__((sysv_abi)) void (*)(Framebuffer*) ) header.e_entry);
+  void (*KernelMain)(Framebuffer*, PSF_FONT*) = ((__attribute__((sysv_abi)) void (*)(Framebuffer*, PSF_FONT*) ) header.e_entry);
   Print(L"Kernel Loaded\n\r");
 
-  //Pre init
-  Framebuffer* newBuffer = GOPInit();
+  // Pre init
+  PSF_FONT* font = loadPSFFont(NULL, L"font.psf", ImageHandle, SystemTable);
+  if (font == NULL) {
+    Print(L"Font is invalid or not found.\n\r");
+  } else {
+    Print(L"Font found and loaded.\n\rChar size = %d\n\r", font->header->charsize);
+  }
 
-  Print(L"Base: 0x%x\n\rSize: 0x%x\n\rWidth: %d\n\rHeight: %d\n\rPixels Per Scan Line: %d\n\r",
-  newBuffer->BaseAddr,
-  newBuffer->Size,
-  newBuffer->Width,
-  newBuffer->Height,
-  newBuffer->ppsl
+  Framebuffer* buffer = GOPInit();
+  unsigned int BytesPerPixel = buffer->Size / (buffer->ppsl * buffer->Height);
+  Print(L"Base: 0x%x\n\rSize: 0x%x\n\rWidth: %d\n\rHeight: %d\n\rPixels Per Scan Line: %d\n\rBytes Per Pixel: %d\n\r",
+  buffer->BaseAddr,
+  buffer->Size,
+  buffer->Width,
+  buffer->Height,
+  buffer->ppsl,
+  BytesPerPixel
   );
 
-  cls(newBuffer, 4);
+  cls(buffer, BytesPerPixel);
   
   //jump to kernel
-  KernelMain(newBuffer);
-  
+  KernelMain(buffer, font);
   return EFI_SUCCESS;  // Exit the UEFI application
 }
 
+/*
+** Plots a pixel at x, y.
+** buffer is GOP frame buffer.
+** BPP is bytes Per Pixel.
+** Color is argb hex value.. (  aarrggbb)
+**                           (0x00000000)
+*/
 void plotPixel(Framebuffer* buffer, unsigned int BPP, unsigned int x, unsigned int y, unsigned int color) {
   *(unsigned int*)(x * BPP + (y * buffer->ppsl * BPP) + buffer->BaseAddr) = color;
 }
 
+/*
+** Draws a line from x1, y1 to x2, y2.
+** buffer is GOP frame buffer.
+** BPP is bytes Per Pixel.
+** Color is argb hex value.. (  aarrggbb)
+**                           (0x00000000)
+*/
 void drawLine(Framebuffer* buffer, unsigned int BPP, unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y2, unsigned int color) {
   int a = y2 - y1;
   int b = x2 - x1;
@@ -167,14 +236,26 @@ void drawLine(Framebuffer* buffer, unsigned int BPP, unsigned int x1, unsigned i
   }
 }
 
+/*
+** Clears the screen.
+** buffer is GOP frame buffer.
+** BPP is bytes Per Pixel.
+*/
 void cls(Framebuffer* buffer, unsigned int BPP) {
-  for (unsigned int x = 0; x < buffer->Width; x++) {
-    for (unsigned int y = 0; y < buffer->Height; y++) {
+  for (int x = 0; x < roundd(buffer->Width); x++) {
+    for (int y = 0; y < roundd(buffer->Height); y++) {
       plotPixel(buffer, BPP, x, y, 0x00000000);
     }
   }
 }
 
+/*
+** Draws a solid rectangle from x1, y1 to x2, y2.
+** buffer is GOP frame buffer.
+** BPP is bytes Per Pixel.
+** Color is argb hex value. (  aarrggbb)
+**                          (0x00000000)
+*/
 void rect(Framebuffer* buffer, unsigned int BPP,  unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y2, unsigned int color) {
   for (unsigned int x = x1; x <= x2; x++) {
     for (unsigned int y = y1; y <= y2; y++) {
@@ -182,6 +263,8 @@ void rect(Framebuffer* buffer, unsigned int BPP,  unsigned int x1, unsigned int 
     }
   }
 }
+
+// sqare root
 double sqrt(double number) {
   double temp = 0;
   double root = number / 2;
@@ -194,10 +277,14 @@ double sqrt(double number) {
   return root;
 }
 
+/*
+** returns a random number between 1 and 0
+*/
 double rand() {
   return 0;
 }
 
+// round to int
 int roundd(double x) {
     if (x < 0.0)
         return (int)(x - 0.5);
