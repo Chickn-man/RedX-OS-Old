@@ -28,7 +28,7 @@ typedef struct {
 
 double sqrt(double number);
 int roundd(double x);
-void cls(Framebuffer* buffer, unsigned int BPP);
+void cls(Framebuffer* buffer);
 EFI_FILE* loadFile(EFI_FILE* Directory, CHAR16* Path, EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable);
 
 PSF_FONT* loadPSFFont(EFI_FILE* Directory, CHAR16* Path, EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable) {
@@ -189,7 +189,7 @@ EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable) {
   }
 
   Framebuffer* buffer = GOPInit();
-  unsigned int BytesPerPixel = buffer->Size / (buffer->ppsl * buffer->Height);
+  unsigned int BytesPerPixel = 4;//buffer->Size / (buffer->ppsl * buffer->Height);
   Print(L"Base: 0x%x\n\rSize: 0x%x\n\rWidth: %d\n\rHeight: %d\n\rPixels Per Scan Line: %d\n\rBytes Per Pixel: %d\n\r",
   buffer->BaseAddr,
   buffer->Size,
@@ -199,7 +199,7 @@ EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable) {
   BytesPerPixel
   );
 
-  cls(buffer, BytesPerPixel);
+  cls(buffer);
   
   //jump to kernel
   KernelMain(buffer, font);
@@ -209,27 +209,27 @@ EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable) {
 /*
 ** Plots a pixel at x, y.
 ** buffer is GOP frame buffer.
-** BPP is bytes Per Pixel.
+** 4 is bytes Per Pixel.
 ** Color is argb hex value.. (  aarrggbb)
 **                           (0x00000000)
 */
-void plotPixel(Framebuffer* buffer, unsigned int BPP, unsigned int x, unsigned int y, unsigned int color) {
-  *(unsigned int*)(x * BPP + (y * buffer->ppsl * BPP) + buffer->BaseAddr) = color;
+void plotPixel(Framebuffer* buffer, unsigned int x, unsigned int y, unsigned int color) {
+  *(unsigned int*)(x * 4 + (y * buffer->ppsl * 4) + buffer->BaseAddr) = color;
 }
 
 /*
 ** Draws a line from x1, y1 to x2, y2.
 ** buffer is GOP frame buffer.
-** BPP is bytes Per Pixel.
+** 4 is bytes Per Pixel.
 ** Color is argb hex value.. (  aarrggbb)
 **                           (0x00000000)
 */
-void drawLine(Framebuffer* buffer, unsigned int BPP, unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y2, unsigned int color) {
+void drawLine(Framebuffer* buffer, unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y2, unsigned int color) {
   int a = y2 - y1;
   int b = x2 - x1;
   int length = sqrt(b *  b + a * a);
   for (double i = 0; i < roundd(length * 2); i++) {
-    plotPixel(buffer, BPP,
+    plotPixel(buffer,
       x1 + roundd(b * (i / roundd(length * 2))),
       y1 + roundd(a * (i / roundd(length * 2))),
       color);
@@ -239,12 +239,12 @@ void drawLine(Framebuffer* buffer, unsigned int BPP, unsigned int x1, unsigned i
 /*
 ** Clears the screen.
 ** buffer is GOP frame buffer.
-** BPP is bytes Per Pixel.
+** 4 is bytes Per Pixel.
 */
-void cls(Framebuffer* buffer, unsigned int BPP) {
+void cls(Framebuffer* buffer) {
   for (int x = 0; x < roundd(buffer->Width); x++) {
     for (int y = 0; y < roundd(buffer->Height); y++) {
-      plotPixel(buffer, BPP, x, y, 0x00000000);
+      plotPixel(buffer, x, y, 0x00000000);
     }
   }
 }
@@ -252,14 +252,14 @@ void cls(Framebuffer* buffer, unsigned int BPP) {
 /*
 ** Draws a solid rectangle from x1, y1 to x2, y2.
 ** buffer is GOP frame buffer.
-** BPP is bytes Per Pixel.
+** 4 is bytes Per Pixel.
 ** Color is argb hex value. (  aarrggbb)
 **                          (0x00000000)
 */
-void rect(Framebuffer* buffer, unsigned int BPP,  unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y2, unsigned int color) {
+void rect(Framebuffer* buffer,   unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y2, unsigned int color) {
   for (unsigned int x = x1; x <= x2; x++) {
     for (unsigned int y = y1; y <= y2; y++) {
-      plotPixel(buffer, BPP, x, y, color);
+      plotPixel(buffer, x, y, color);
     }
   }
 }
