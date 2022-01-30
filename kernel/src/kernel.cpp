@@ -51,6 +51,8 @@ extern "C" void main(Framebuffer* framebuffer, PSF_FONT* font) {
   cursor.xm = roundd(framebuffer->ppsl / 8);
   cursor.ym = roundd(framebuffer->Height / 16);
   Cursor* cur = &cursor;
+
+  cls(framebuffer);
   
   // RedX
   double xsize = 0.40;
@@ -58,7 +60,7 @@ extern "C" void main(Framebuffer* framebuffer, PSF_FONT* font) {
   drawLine(framebuffer, framebuffer->Width / 2 - framebuffer->Height * xsize, framebuffer->Height / 2 + framebuffer->Height * xsize, framebuffer->Width / 2 + framebuffer->Height * xsize, framebuffer->Height / 2 - framebuffer->Height * xsize, colors[0]);
   
   printString(framebuffer, font, cur, "RedX OS", colors[0]);
-  //cls(framebuffer, BytesPerPixel);
+
   //halt cpu
   for (;;) {
     asm volatile("hlt");
@@ -110,7 +112,7 @@ Show More
 void cls(Framebuffer* buffer) {
   for (int x = 0; x < buffer->Width; x++) {
     for (int y = 0; y < buffer->Height; y++) {
-      plotPixel(buffer, x, y, 0x00ff0000);
+      plotPixel(buffer, x, y, 0x00000000);
     }
   }
 }
