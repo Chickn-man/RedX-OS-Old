@@ -26,9 +26,6 @@ typedef struct {
   void* buffer;
 } PSF_FONT;
 
-double sqrt(double number);
-int roundd(double x);
-void cls(Framebuffer* buffer);
 EFI_FILE* loadFile(EFI_FILE* Directory, CHAR16* Path, EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable);
 
 PSF_FONT* loadPSFFont(EFI_FILE* Directory, CHAR16* Path, EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE* SystemTable) {
@@ -202,90 +199,4 @@ EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable) {
   //jump to kernel
   KernelMain(buffer, font);
   return EFI_SUCCESS;  // Exit the UEFI application
-}
-
-/*
-** Plots a pixel at x, y.
-** buffer is GOP frame buffer.
-** 4 is bytes Per Pixel.
-** Color is argb hex value.. (  aarrggbb)
-**                           (0x00000000)
-*/
-void plotPixel(Framebuffer* buffer, unsigned int x, unsigned int y, unsigned int color) {
-  *(unsigned int*)(x * 4 + (y * buffer->ppsl * 4) + buffer->BaseAddr) = color;
-}
-
-/*
-** Draws a line from x1, y1 to x2, y2.
-** buffer is GOP frame buffer.
-** 4 is bytes Per Pixel.
-** Color is argb hex value.. (  aarrggbb)
-**                           (0x00000000)
-*/
-void drawLine(Framebuffer* buffer, unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y2, unsigned int color) {
-  int a = y2 - y1;
-  int b = x2 - x1;
-  int length = sqrt(b *  b + a * a);
-  for (double i = 0; i < roundd(length * 2); i++) {
-    plotPixel(buffer,
-      x1 + roundd(b * (i / roundd(length * 2))),
-      y1 + roundd(a * (i / roundd(length * 2))),
-      color);
-  }
-}
-
-/*
-** Clears the screen.
-** buffer is GOP frame buffer.
-** 4 is bytes Per Pixel.
-*/
-void cls(Framebuffer* buffer) {
-  for (int x = 0; x < roundd(buffer->Width); x++) {
-    for (int y = 0; y < roundd(buffer->Height); y++) {
-      plotPixel(buffer, x, y, 0x00000000);
-    }
-  }
-}
-
-/*
-** Draws a solid rectangle from x1, y1 to x2, y2.
-** buffer is GOP frame buffer.
-** 4 is bytes Per Pixel.
-** Color is argb hex value. (  aarrggbb)
-**                          (0x00000000)
-*/
-void rect(Framebuffer* buffer,   unsigned int x1, unsigned int y1, unsigned int x2, unsigned int y2, unsigned int color) {
-  for (unsigned int x = x1; x <= x2; x++) {
-    for (unsigned int y = y1; y <= y2; y++) {
-      plotPixel(buffer, x, y, color);
-    }
-  }
-}
-
-// sqare root
-double sqrt(double number) {
-  double temp = 0;
-  double root = number / 2;
-  int i = 0;
-  while (root != temp && i < 10000) {
-    temp = root;
-    root = (number / temp + temp) / 2;
-    i++;
-  }
-  return root;
-}
-
-/*
-** returns a random number between 1 and 0
-*/
-double rand() {
-  return 0;
-}
-
-// round to int
-int roundd(double x) {
-    if (x < 0.0)
-        return (int)(x - 0.5);
-    else
-        return (int)(x + 0.5);
 }
