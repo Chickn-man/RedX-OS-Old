@@ -13,6 +13,7 @@ extern "C" void main(Framebuffer* framebuffer, PSF_FONT* font) {
     0xff00ff00,
     0xff0000ff,
     0xffff00ff,
+    0xffffffff,
   };
 
   /* basic gop renderer init */
@@ -35,13 +36,30 @@ extern "C" void main(Framebuffer* framebuffer, PSF_FONT* font) {
   gop.drawLine(framebuffer->Width / 2 - framebuffer->Height * xsize, framebuffer->Height / 2 - framebuffer->Height * xsize, framebuffer->Width / 2 + framebuffer->Height * xsize, framebuffer->Height / 2 + framebuffer->Height * xsize, colors[0]);
   gop.drawLine(framebuffer->Width / 2 - framebuffer->Height * xsize, framebuffer->Height / 2 + framebuffer->Height * xsize, framebuffer->Width / 2 + framebuffer->Height * xsize, framebuffer->Height / 2 - framebuffer->Height * xsize, colors[0]);
   
-  gop.printString(cur, "RedX OS", colors[0]);
-
+  // Welcome
+  gop.printString(cur, "Welcome to RedX OS!", colors[0]);
+  /*for (uint8_t i = 0; i < cur->ym - 7; i++) {
+    cur->newLine();
+  }*/
+  // GOP info
+  cur->newLine();
+  cur->newLine();
+  gop.printString(cur, "-GOP info-", colors[6]);
+  cur->newLine();
+  gop.printString(cur, cat("Framebuffer base address: ", toHString((uint64_t)framebuffer->BaseAddr)), colors[6]);
+  cur->newLine();
+  gop.printString(cur, cat("Framebuffer size: ", toHString((uint32_t)framebuffer->Size)), colors[6]);
+  cur->newLine();
+  gop.printString(cur, cat("Framebuffer width: ", toString((uint64_t)framebuffer->Width)), colors[6]);
+  cur->newLine();
+  gop.printString(cur, cat("Framebuffer height: ", toString((uint64_t)framebuffer->Height)), colors[6]);
+  cur->newLine();
+  gop.printString(cur, cat("Framebuffer pixels per scan line: ", toString((uint64_t)framebuffer->ppsl)), colors[6]);
+  cur->newLine();
+  
   //halt cpu
   for (;;) {
     asm volatile("hlt");
   }
-
   return;
-
 }

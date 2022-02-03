@@ -26,6 +26,14 @@ typedef struct {
   unsigned int y;
   unsigned int xm;
   unsigned int ym;
+  void reset() {
+    this->x = 0;
+    this->y = 0;
+  }
+  void newLine() {
+    this->x = 0;
+    this->y++;
+  }
 } Cursor;
 
 class basicRenderer {
