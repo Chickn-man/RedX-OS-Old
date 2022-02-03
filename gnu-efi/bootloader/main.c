@@ -186,14 +186,12 @@ EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable) {
   }
 
   Framebuffer* buffer = GOPInit();
-  unsigned int BytesPerPixel = 4;//buffer->Size / (buffer->ppsl * buffer->Height);
   Print(L"Base: 0x%x\n\rSize: 0x%x\n\rWidth: %d\n\rHeight: %d\n\rPixels Per Scan Line: %d\n\rBytes Per Pixel: %d\n\r",
   buffer->BaseAddr,
   buffer->Size,
   buffer->Width,
   buffer->Height,
-  buffer->ppsl,
-  BytesPerPixel
+  buffer->ppsl
   );
   
   //jump to kernel
