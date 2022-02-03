@@ -1,8 +1,7 @@
 #include <efi.h>
 #include <efilib.h>
 #include <elf.h>
-
-typedef unsigned long long size_t;
+#include <stddef.h>
 
 typedef struct {
   void* BaseAddr;
@@ -115,11 +114,13 @@ int memcmp(const void* aptr, const void* bptr, size_t n) {
 }
 
 EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable) {
+  uint8_t error = 0;
 	InitializeLib(ImageHandle, SystemTable);
   Print(L"Loading Kernel...\n\r");
 
   EFI_FILE* Kernel = loadFile(NULL, L"kernel", ImageHandle, SystemTable);
   if (Kernel == NULL) {
+    error = 0;
     Print(L"ERR: Kernel Not Found\n\r");
   } else {
     Print(L"Kernel Found\n\r");
@@ -144,6 +145,7 @@ EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable) {
 		header.e_machine != EM_X86_64 ||
 		header.e_version != EV_CURRENT
 	) {
+    error = 0;
     Print(L"Bad Kernel\n\r");
   } else {
     Print(L"Kernel Verified\n\r");
@@ -180,21 +182,29 @@ EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable) {
   // Pre init
   PSF_FONT* font = loadPSFFont(NULL, L"font.psf", ImageHandle, SystemTable);
   if (font == NULL) {
+    error = 1;
     Print(L"Font is invalid or not found.\n\r");
   } else {
     Print(L"Font found and loaded.\n\rChar size = %d\n\r", font->header->charsize);
   }
 
   Framebuffer* buffer = GOPInit();
-  Print(L"Base: 0x%x\n\rSize: 0x%x\n\rWidth: %d\n\rHeight: %d\n\rPixels Per Scan Line: %d\n\rBytes Per Pixel: %d\n\r",
-  buffer->BaseAddr,
-  buffer->Size,
-  buffer->Width,
-  buffer->Height,
-  buffer->ppsl
-  );
+  if (buffer == NULL) {
+    error = 0;
+  } else {
+    Print(L"Base: 0x%x\n\rSize: 0x%x\n\rWidth: %d\n\rHeight: %d\n\rPixels Per Scan Line: %d\n\rBytes Per Pixel: %d\n\r",
+    buffer->BaseAddr,
+    buffer->Size,
+    buffer->Width,
+    buffer->Height,
+    buffer->ppsl
+    );
+  }
   
   //jump to kernel
-  KernelMain(buffer, font);
+  if (error == 0) {
+    KernelMain(buffer, font);
+  }
+  
   return EFI_SUCCESS;  // Exit the UEFI application
 }
