@@ -31,8 +31,10 @@ typedef struct {
     this->y = 0;
   }
   void newLine() {
-    this->x = 0;
-    this->y++;
+    if (this->y <= this->ym) {
+      this->x = 0;
+      this->y++;
+    }
   }
 } Cursor;
 
@@ -46,4 +48,5 @@ class basicRenderer {
   void cls();
   void printChar(char chr, unsigned int x, unsigned int y, unsigned int color);
   void printString(Cursor* cursor, const char* str, unsigned int color);
+  void print(Cursor* cursor, const char* str, unsigned int color);
 };

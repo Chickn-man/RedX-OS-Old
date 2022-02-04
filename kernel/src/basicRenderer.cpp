@@ -74,17 +74,37 @@ void basicRenderer::printChar(char chr, unsigned int x, unsigned int y, unsigned
 }
 
 void basicRenderer::printString(Cursor* cursor, const char* str, unsigned int color) {
-  char* chr = (char*)str; 
- 
+  char* chr = (char*)str;
+  
   while (*chr != 0) {
+    if (cursor->x > cursor->xm) {
+      cursor->newLine();
+    }
     printChar(*chr, cursor->x * 8, cursor->y * 16, color);
     cursor->x++;
+    chr++;
+  }
+
+}
+
+void basicRenderer::print(Cursor* cursor, const char* str, unsigned int color) {
+  char* chr = (char*)str;
+  uint8_t length = 0;
+  while (*chr != 0) {
+    length++;
+    chr++;
+  }
+  if (cursor->xm - cursor->x < length) {
+    cursor->newLine();
+  }
+
+  chr = (char*)str;
+  while (*chr != 0) {
     if (cursor->x > cursor->xm) {
-      cursor->x = 0;
-      if (cursor->y < cursor->ym) {
-        cursor->y++;
-      }
-    }  
+      cursor->newLine();
+    } 
+    printChar(*chr, cursor->x * 8, cursor->y * 16, color);
+    cursor->x++;
     chr++;
   }
 
