@@ -1,6 +1,18 @@
 #include "basicRenderer.h"
 #include "math.h"
 
+void cursor::reset() {
+  this->x = 0;
+  this->y = 0;
+}
+
+void cursor::newLine() {
+  if (this->y <= this->ym) {
+    this->x = 0;
+    this->y++;
+  }
+}
+
 /*
 ** Plots a pixel at x, y.
 ** buffer is GOP frame buffer.
@@ -73,38 +85,38 @@ void basicRenderer::printChar(char chr, unsigned int x, unsigned int y, unsigned
   }
 }
 
-void basicRenderer::printString(Cursor* cursor, const char* str, unsigned int color) {
+void basicRenderer::printString(cursor* cur, const char* str, unsigned int color) {
   char* chr = (char*)str;
   
   while (*chr != 0) {
-    if (cursor->x > cursor->xm) {
-      cursor->newLine();
+    if (cur->x > cur->xm) {
+      cur->newLine();
     }
-    printChar(*chr, cursor->x * 8, cursor->y * 16, color);
-    cursor->x++;
+    printChar(*chr, cur->x * 8, cur->y * 16, color);
+    cur->x++;
     chr++;
   }
 
 }
 
-void basicRenderer::print(Cursor* cursor, const char* str, unsigned int color) {
+void basicRenderer::print(cursor* cur, const char* str, unsigned int color) {
   char* chr = (char*)str;
   uint8_t length = 0;
   while (*chr != 0) {
     length++;
     chr++;
   }
-  if (cursor->xm - cursor->x < length) {
-    cursor->newLine();
+  if (cur->xm - cur->x < length) {
+    cur->newLine();
   }
 
   chr = (char*)str;
   while (*chr != 0) {
-    if (cursor->x > cursor->xm) {
-      cursor->newLine();
+    if (cur->x > cur->xm) {
+      cur->newLine();
     } 
-    printChar(*chr, cursor->x * 8, cursor->y * 16, color);
-    cursor->x++;
+    printChar(*chr, cur->x * 8, cur->y * 16, color);
+    cur->x++;
     chr++;
   }
 
