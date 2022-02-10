@@ -3,14 +3,11 @@
 #include "basicRenderer.h"
 #include "memory/memory.h"
 #include "memory/paging.h"
-
-struct KernelParameters {
-  Framebuffer* buffer;
-  PSF_FONT* font;
-  EFI_MEMORY_DESCRIPTOR* map;
-  uint64_t mapSize;
-  uint64_t descSize;
-};
+#include "gdt/gdt.h"
+#include "interrupts/interrupts.h"
+#include "kernelUtil.h"
+#include "io/io.h"
+#include "renderer.h"
 
 extern uint64_t _KernelStart;
 extern uint64_t _KernelEnd;
@@ -19,103 +16,117 @@ extern "C" void main(KernelParameters* parameters) {
   
   /* var init */
   uint64_t mapEntries = parameters->mapSize / parameters->descSize;
-  const unsigned int colors[] = {
-    0xffff0000,
-    0xffffc000,
-    0xffffff00,
-    0xff00ff00,
-    0xff0000ff,
-    0xffff00ff,
-    0xffffffff,
-  };
+  VAI = (void*)(getMemorySize(parameters->map, mapEntries, parameters->descSize) + parameters->buffer->Size);
 
-  /* basic gop renderer init */
-  basicRenderer gop;
-  gop.buffer = parameters->buffer;
-  gop.font = parameters->font;
+  /* basic renderer init */
+  basicRender.buffer = parameters->buffer;
+  basicRender.font = parameters->font;
+  rendr.buffer = parameters->buffer;
+  rendr.font = parameters->font;
 
   /* Term cursor */
   cursor curT;
   curT.x = 0;
   curT.y = 0;
-  curT.xm = roundd(parameters->buffer->ppsl / 8);
-  curT.ym = roundd(parameters->buffer->Height / 16);
-  cursor* cur = &curT;
+  curT.xm = roundd(parameters->buffer->ppsl / 8) - 1;
+  curT.ym = roundd(parameters->buffer->Height / 16) - 1;
+  cur = &curT;
+
+  // Load gdt
+  basicRender.printString("loading gdt", colors[7]);
+  cur->newLine();
+  GDTDesc gdtDesc;
+  gdtDesc.size = sizeof(GDT) - 1;
+  gdtDesc.offset = (uint64_t)&globalDescrptorTable;
+  loadGDT(&gdtDesc);
 
   // Initialize allocator
-  gop.printString(cur, "initializing page allocator", colors[6]);
+  basicRender.printString("initializing page allocator", colors[7]);
   cur->newLine();
   allocator = pageAllocator();
   allocator.readMap(parameters->map, parameters->mapSize, parameters->descSize);
 
+  basicRender.printString("setting up interrupt handlers", colors[7]);
+  cur->newLine();
+
   // allocate ram for kernel
-  gop.printString(cur, "allocating ram for kernel", colors[6]);
+  basicRender.printString("locking pages for kernel & frame buffer", colors[7]);
   cur->newLine();
   uint64_t kernelSize = (uint64_t)&_KernelEnd - (uint64_t)&_KernelStart;
   uint64_t kernelPages = (uint64_t)(kernelSize / 4096) + 1;
   allocator.locks(&_KernelStart, kernelPages);
-
+  
   // Initialize page manager
-  gop.printString(cur, "initializing page manager", colors[6]);
+  basicRender.printString("initializing page manager", colors[7]);
   cur->newLine();
   table* PML4 = (table*)allocator.getPage();
   set(PML4, 0, 0x1000);
   pTableMan pageTableMan = pTableMan(PML4);
 
-  gop.printString(cur, "maping kernel memory", colors[6]);
+  basicRender.printString("maping memory", colors[7]);
   cur->newLine();
   for (uint64_t i = 0; i < getMemorySize(parameters->map, mapEntries, parameters->descSize); i += 0x1000) {
     pageTableMan.map((void*)i, (void*)i);
   }
-  gop.printString(cur, "maping framebuffer memory", colors[6]);
-  cur->newLine();
-  allocator.locks(parameters->buffer->BaseAddr, parameters->buffer->Size / 0x1000 + 1);
+  basicRender.printString("maping framebuffer memory", colors[7]);
+  allocator.locks(parameters->buffer->BaseAddr, ((parameters->buffer->Size + 0x1000) / 0x1000) + 1);
   for (uint64_t i = (uint64_t)parameters->buffer->BaseAddr; i < (uint64_t)parameters->buffer->BaseAddr + (uint64_t)parameters->buffer->Size + 0x1000; i += 0x1000) {
     pageTableMan.map((void*)i, (void*)i);
   }
 
+  basicRender.printString("loading page table", colors[7]);
+  cur->newLine();
   asm ("mov %0, %%cr3" : : "r" (PML4));
 
+  IDTR idtr;
+  idtr.limit = 0x0fff;
+  idtr.offset = (uint64_t)allocator.getPage();
+  IDTEntry* pageFault = (IDTEntry*)(idtr.offset + 0xe * sizeof(IDTEntry));
+  pageFault->setOffset((uint64_t)pageFaultHandler);
+  pageFault->type_attr = intr;
+  pageFault->selector = 0x08;
+
+  IDTEntry* doubleFault = (IDTEntry*)(idtr.offset + 0x8 * sizeof(IDTEntry));
+  doubleFault->setOffset((uint64_t)doubleFaultHandler);
+  doubleFault->type_attr = intr;
+  doubleFault->selector = 0x08;
+
+  IDTEntry* genProcFault = (IDTEntry*)(idtr.offset + 0xd * sizeof(IDTEntry));
+  genProcFault->setOffset((uint64_t)genProcFaultHandler);
+  genProcFault->type_attr = intr;
+  genProcFault->selector = 0x08;
+
+  IDTEntry* keyboardIntr = (IDTEntry*)(idtr.offset + 0x21 * sizeof(IDTEntry));
+  keyboardIntr->setOffset((uint64_t)keyboardHandler);
+  keyboardIntr->type_attr = intr;
+  keyboardIntr->selector = 0x08;
+
+  asm ("lidt %0" : : "m" (idtr));
+
+  basicRender.printString("remaping pic", colors[7]);
+  cur->newLine();
+  remapPIC();
+
+  outb(PIC1_DATA, 0b11111101);
+  outb(PIC2_DATA, 0b11111101);
+  
+  asm ("sti");
+
+  vcs.size = (uint64_t)(cur->xm * cur->ym);
+  vcs.bufferAddr = (char*)&vcs.buffer;
+  vcs.colorAddr = (uint32_t*)&vcs.color;
+  //vcs.bufferAddr = (char*)pageTableMan.getPool(vcs.size);
+  //vcs.colorAddr = (uint32_t*)pageTableMan.getPool(vcs.size * 4);
+
   cur->reset();
-  gop.cls();
+  rendr.cls();
   
-  // RedX
-  double xsize = 0.40;
-  gop.drawLine(parameters->buffer->Width / 2 - parameters->buffer->Height * xsize, parameters->buffer->Height / 2 - parameters->buffer->Height * xsize, parameters->buffer->Width / 2 + parameters->buffer->Height * xsize, parameters->buffer->Height / 2 + parameters->buffer->Height * xsize, colors[0]);
-  gop.drawLine(parameters->buffer->Width / 2 - parameters->buffer->Height * xsize, parameters->buffer->Height / 2 + parameters->buffer->Height * xsize, parameters->buffer->Width / 2 + parameters->buffer->Height * xsize, parameters->buffer->Height / 2 - parameters->buffer->Height * xsize, colors[0]);
+  // welcome
+  welcome(parameters);
   
-  // Welcome
-  gop.printString(cur, "Welcome to RedX OS!", colors[0]);
-
-  // GOP info
-  cur->newLine();
-  cur->newLine();
-  gop.printString(cur, "-GOP Info-", colors[4]);
-  cur->newLine();
-  gop.printString(cur, cat("Framebuffer Base Address: ", toHString((uint64_t)parameters->buffer->BaseAddr)), colors[6]);
-  cur->newLine();
-  gop.printString(cur, cat("Framebuffer Size: ", toHString((uint32_t)parameters->buffer->Size)), colors[6]);
-  cur->newLine();
-  gop.printString(cur, cat("Framebuffer Width: ", toString((uint64_t)parameters->buffer->Width)), colors[6]);
-  cur->newLine();
-  gop.printString(cur, cat("Framebuffer Height: ", toString((uint64_t)parameters->buffer->Height)), colors[6]);
-  cur->newLine();
-  gop.printString(cur, cat("Framebuffer Pixels Per Scan Line: ", toString((uint64_t)parameters->buffer->ppsl)), colors[6]);
-  cur->newLine();
+  /*int* test = (int*)0x8000000000;
+  *test = 2;*/
   
-  // Print system info
-  cur->newLine();
-  gop.printString(cur, "-System Info-", colors[4]);
-  cur->newLine();
-toString((uint64_t)parameters->buffer->Height);
-  gop.printString(cur, cat("Screen Resolution: ", toString((uint64_t)parameters->buffer->Width)), colors[6]);
-  gop.printString(cur, "x", colors[6]);
-  gop.printString(cur, toString((uint64_t)parameters->buffer->Height), colors[6]);
-  cur->newLine();
-  gop.printString(cur, cat("Ram Size: ", toString((double)(allocator.getFreeMem() + allocator.getUsedMem())  / 1073741824, 2)), colors[6]);
-  gop.printString(cur, "GiB", colors[6]);
-  cur->newLine();
-
   //halt cpu
   for (;;) {
     asm volatile("hlt");

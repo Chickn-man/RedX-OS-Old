@@ -50,7 +50,7 @@ void pageAllocator::readMap(EFI_MEMORY_DESCRIPTOR* map, size_t size, size_t desc
   void* largestSeg = NULL;
   size_t largestSegSize = 0;
 
-  for (int i = 0; i < entries; i++) {
+  for (uint64_t i = 0; i < entries; i++) {
     EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((uint64_t)map + (i * descSize));
     if (desc->type == 7) {
       if (desc->pages * 4096 > largestSegSize) {
@@ -67,22 +67,22 @@ void pageAllocator::readMap(EFI_MEMORY_DESCRIPTOR* map, size_t size, size_t desc
 
   bitmapInit(bitmapSize, largestSeg);
 
-  locks(pageBitmap.buffer, pageBitmap.size / 4096 + 1);
-
-  for (int i = 0; i < entries; i++) {
+  reserves(0, memSize / 4096 + 1);
+  for (uint64_t i = 0; i < entries; i++) {
     EFI_MEMORY_DESCRIPTOR* desc = (EFI_MEMORY_DESCRIPTOR*)((uint64_t)map + (i * descSize));
-    if (desc->type != 7) {
-      reserves(desc->physAddr, desc->pages);
+    if (desc->type == 7) {
+      releases(desc->physAddr, desc->pages);
     } 
   }
-
+  reserves(0, 0x100);
+  locks(pageBitmap.buffer, pageBitmap.size / 4096 + 1);
 }
 
 void pageAllocator::bitmapInit(size_t size, void* bufferAddr) {
   pageBitmap.size = size;
   pageBitmap.buffer = (uint8_t*)bufferAddr;
 
-  for (int i = 0; i < size; i++) {
+  for (uint32_t i = 0; i < size; i++) {
     *(uint8_t*)(pageBitmap.buffer + i) = 0;
   }
 }
@@ -94,8 +94,14 @@ void* pageAllocator::getPage() {
     lock((void*)(pageI * 4096));
     return (void*)(pageI * 4096);
   }
-
-  return (void*)1; // TODO swap ram
+  
+  pageI = 0;
+  for (; pageI < pageBitmap.size * 8; pageI++) {
+    if (pageBitmap[pageI] == true) continue;
+    lock((void*)(pageI * 4096));
+    return (void*)(pageI * 4096);
+  }
+  return NULL; // TODO swap ram
 }
 
 void pageAllocator::free(void* addr) {
@@ -124,7 +130,7 @@ void pageAllocator::lock(void* addr) {
 }
 
 void pageAllocator::locks(void* addr, uint64_t count) {
-  for (int i = 0; i < count; i++) {
+  for (uint64_t i = 0; i < count; i++) {
     lock((void*)((uint64_t)addr + (i * 4096)));
   }
 }

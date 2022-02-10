@@ -36,4 +36,7 @@ class pTableMan {
   pTableMan(table* PML4 /*level four address*/);
   table* PML4;
   void map(void* V, void* P);
+  void* getPool(uint64_t size);
 };
+
+extern void* VAI;

@@ -1,42 +1,10 @@
 #pragma once
 #include <stddef.h>
+#include "basicRenderer.h"
 #include "math.h"
+#include "terminal.h"
 
-struct Framebuffer {
-  void* BaseAddr;
-  size_t Size;
-  unsigned int Width;
-  unsigned int Height;
-  unsigned int ppsl; //Pixels per scan line
-};
-
-struct PSF_HEADER {
-  unsigned char magic[2];
-  unsigned char mode;
-  unsigned char charsize;
-};
-
-struct PSF_FONT {
-  PSF_HEADER* header;
-  void* buffer;
-};
-
-struct cursor {
-  public:
-  unsigned int x;
-  unsigned int y;
-  unsigned int xm;
-  unsigned int ym;
-  void reset();
-  void newLine();
-  void back();
-  void up();
-  void down();
-  void left();
-  void right();
-};
-
-class basicRenderer {
+class Renderer {
   public:
   Framebuffer* buffer;
   PSF_FONT* font;
@@ -54,5 +22,4 @@ class basicRenderer {
   void print(const char* str, unsigned int color);
 };
 
-extern basicRenderer basicRender;
-extern cursor* cur;
+extern Renderer rendr;
