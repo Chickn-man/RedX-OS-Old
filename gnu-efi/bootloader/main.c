@@ -113,6 +113,14 @@ int memcmp(const void* aptr, const void* bptr, size_t n) {
   return 0;
 }
 
+typedef struct {
+  Framebuffer* buffer;
+  PSF_FONT* font;
+  EFI_MEMORY_DESCRIPTOR* map;
+  UINTN mapSize;
+  UINTN descSize;
+} KernelParameters;
+
 EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable) {
   uint8_t error = 0;
 	InitializeLib(ImageHandle, SystemTable);
@@ -176,7 +184,6 @@ EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable) {
       }
     }
   }
-  void (*KernelMain)(Framebuffer*, PSF_FONT*) = ((__attribute__((sysv_abi)) void (*)(Framebuffer*, PSF_FONT*) ) header.e_entry);
   Print(L"Kernel Loaded\n\r");
 
   // Pre init
@@ -192,7 +199,7 @@ EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable) {
   if (buffer == NULL) {
     error = 0;
   } else {
-    Print(L"Base: 0x%x\n\rSize: 0x%x\n\rWidth: %d\n\rHeight: %d\n\rPixels Per Scan Line: %d\n\rBytes Per Pixel: %d\n\r",
+    Print(L"Base: 0x%x\n\rSize: 0x%x\n\rWidth: %d\n\rHeight: %d\n\rPixels Per Scan Line: %d\n\r",
     buffer->BaseAddr,
     buffer->Size,
     buffer->Width,
@@ -200,10 +207,29 @@ EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable) {
     buffer->ppsl
     );
   }
+
+  EFI_MEMORY_DESCRIPTOR* map = NULL;
+  UINTN mapSize, mapKey, descSize;
+  UINT32 descVersion;
+  {
+    SystemTable->BootServices->GetMemoryMap(&mapSize, map, &mapKey, &descSize, &descVersion);
+    SystemTable->BootServices->AllocatePool(EfiLoaderData, mapSize, (void**)&map);
+    SystemTable->BootServices->GetMemoryMap(&mapSize, map, &mapKey, &descSize, &descVersion);
+  }
   
+  // Kernel prep
+  void (*KernelMain)(KernelParameters*) = ((__attribute__((sysv_abi)) void (*)(KernelParameters*) ) header.e_entry);
+  KernelParameters kernelParameters;
+  kernelParameters.buffer = buffer;
+  kernelParameters.font = font;
+  kernelParameters.map = map;
+  kernelParameters.mapSize = mapSize;
+  kernelParameters.descSize = descSize;
+
   //jump to kernel
   if (error == 0) {
-    KernelMain(buffer, font);
+    SystemTable->BootServices->ExitBootServices(ImageHandle, mapKey);
+    KernelMain(&kernelParameters);
   }
   
   return EFI_SUCCESS;  // Exit the UEFI application
