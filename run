@@ -1,4 +1,6 @@
-cd gnu-efi/
+cd bootloader
+nasm -o bin src/main.asm
+cd ../gnu-efi/
 make bootloader
 cd ../kernel
-make setup kernel buildimg run
+make kernel buildiso run
