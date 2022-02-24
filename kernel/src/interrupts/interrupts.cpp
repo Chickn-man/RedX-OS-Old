@@ -40,11 +40,29 @@ __attribute__((interrupt)) void genProcFaultHandler(struct interruptFrame* frame
   }
 }
 
-__attribute__((interrupt)) void keyboardHandler(struct interruptFrame* frame) {
-  uint8_t scancode = inb(0x60);
-  //rendr.printString(toHString(scancode), 0xffffffff);
+uint8_t scancode;
+__attribute__((interrupt)) void keyboardHandler(interruptFrame* frame) {
+  scancode = inb(0x60);
   term.update(true, scancode);
+
   endMaster();
+}
+
+uint8_t mData;
+__attribute__((interrupt)) void mouseHandler(interruptFrame* frame) {
+  mData = inb(0x60);
+  handleMouse(mData);
+  //handleMouse(mData);
+
+  endSlave();
+}
+
+IDTR idtr;
+void setGate(void* handler, uint8_t offset, uint8_t type_attr, uint8_t selector) {
+  IDTEntry* interrupt = (IDTEntry*)(idtr.offset + offset * sizeof(IDTEntry));
+  interrupt->setOffset((uint64_t)handler);
+  interrupt->type_attr = intr;
+  interrupt->selector = 0x08;
 }
 
 void remapPIC(){

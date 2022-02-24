@@ -63,7 +63,7 @@ void Renderer::cls() {
       }
     }
   }
-  for (uint16_t i = 0; i < cur->xm * cur->ym; i++) {
+  for (uint16_t i = 0; i < cur.xm * cur.ym; i++) {
     vcs.bufferAddr[i] = 0;
   }
 }
@@ -101,24 +101,24 @@ void Renderer::printChar(char chr, unsigned int x, unsigned int y, unsigned int 
 }
 
 void Renderer::printChar(char chr, unsigned int color) {
-  *(char*)(cur->x + (cur->y * cur->xm) + (char*)vcs.bufferAddr) = chr;
-  *(uint32_t*)((cur->x + (cur->y * cur->xm)) * 4 + (uint32_t*)vcs.colorAddr) = color;
-  if (cur->x > cur->xm) {
-    cur->newLine();
+  *(char*)(cur.x + (cur.y * (cur.xm + 1)) + (char*)vcs.bufferAddr) = chr;
+  *(uint32_t*)((cur.x + (cur.y * (cur.xm + 1))) * 4 + (char*)vcs.colorAddr) = color;
+  if (cur.x > cur.xm) {
+    cur.newLine();
   }
-  printChar(chr, cur->x * 8, cur->y * 16, color);
-  cur->x++;
+  printChar(chr, cur.x * 8, cur.y * 16, color);
+  cur.x++;
 }
 
 void Renderer::putChar(char chr, unsigned int color) {
-  if (cur->x > cur->xm) {
-    cur->newLine();
+  if (cur.x > cur.xm) {
+    cur.newLine();
   }
-  printChar(chr, cur->x * 8, cur->y * 16, color);
+  printChar(chr, cur.x * 8, cur.y * 16, color);
 }
 
 void Renderer::delChar(unsigned int x, unsigned int y, unsigned int color) {
-  *(char*)(cur->x + (cur->y * cur->xm) + (char*)vcs.bufferAddr) = 0x00;
+  *(char*)(cur.x + (cur.y * (cur.xm + 1)) + (char*)vcs.bufferAddr) = 0x00;
   for (unsigned long u = y; u < y + 16; u++) {
     for (unsigned long c = x; c < x + 8; c++) {
       if ((c * 4 + (u * buffer->ppsl * 4) + (char*)buffer->BaseAddr) < (char*)buffer->BaseAddr + buffer->Size) { 
@@ -142,8 +142,8 @@ void Renderer::printString(const char* str, unsigned int color) {
   char* chr = (char*)str;
   
   while (*chr != 0) {
-    if (cur->x > cur->xm) {
-      cur->newLine();
+    if (cur.x > cur.xm) {
+      cur.newLine();
     }
     printChar(*chr, color);
     chr++;
@@ -158,14 +158,14 @@ void Renderer::print(const char* str, unsigned int color) {
     length++;
     chr++;
   }
-  if (cur->xm - cur->x < length) {
-    cur->newLine();
+  if (cur.xm - cur.x < length) {
+    cur.newLine();
   }
 
   chr = (char*)str;
   while (*chr != 0) {
-    if (cur->x > cur->xm) {
-      cur->newLine();
+    if (cur.x > cur.xm) {
+      cur.newLine();
     } 
     printChar(*chr, color);
     chr++;

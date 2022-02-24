@@ -41,6 +41,10 @@ uint64_t usedMem;
 bool initialized = false;
 pageAllocator allocator;
 
+void* pageAlign(void* addr) {
+  return (void*)(((uint64_t)addr / 0x1000) * 0x1000);
+}
+
 void pageAllocator::readMap(EFI_MEMORY_DESCRIPTOR* map, size_t size, size_t descSize) {
   if (initialized) return;
   initialized = true;
@@ -101,6 +105,13 @@ void* pageAllocator::getPage() {
     lock((void*)(pageI * 4096));
     return (void*)(pageI * 4096);
   }
+  basicRender.cls();
+  cur.reset();
+  basicRender.printString( "[ ", 0xffffffff);
+  basicRender.printString( "PANIC", 0xffff0000);
+  basicRender.printString( " ] ", 0xffffffff);
+  basicRender.printString("Out of RAM", 0xffffffff);
+  for (;;) asm volatile("hlt");
   return NULL; // TODO swap ram
 }
 

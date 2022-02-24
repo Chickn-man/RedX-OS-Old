@@ -5,8 +5,6 @@
 #include "renderer.h"
 
 struct CharDev {
-  char buffer[0xffff];
-  uint32_t color[0x3f480];
   char* bufferAddr;
   uint32_t* colorAddr;
   uint16_t size;

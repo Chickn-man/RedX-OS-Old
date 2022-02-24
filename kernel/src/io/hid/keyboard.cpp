@@ -54,25 +54,25 @@ bool mod;
 void handleKeyBoard(uint8_t scancode) {
   if (mod) {
     if (scancode == Up) {
-      rendr.delChar(cur->x * 8, cur->y * 16, 0x00000000);
-      cur->up();
+      rendr.delChar(cur.x * 8, cur.y * 16, 0x00000000);
+      cur.up();
       rendr.printChar('_', 0xffffffff);
-      cur->left();
+      cur.left();
     } else if (scancode == Down) {
-      rendr.delChar(cur->x * 8, cur->y * 16, 0x00000000);
-      cur->down();
+      rendr.delChar(cur.x * 8, cur.y * 16, 0x00000000);
+      cur.down();
       rendr.printChar('_', 0xffffffff);
-      cur->left();
+      cur.left();
     } else if (scancode == Left) {
-      rendr.delChar(cur->x * 8, cur->y * 16, 0x00000000);
-      cur->left();
+      rendr.delChar(cur.x * 8, cur.y * 16, 0x00000000);
+      cur.left();
       rendr.printChar('_', 0xffffffff);
-      cur->left();
+      cur.left();
     } else if (scancode == Right) {
-      rendr.delChar(cur->x * 8, cur->y * 16, 0x00000000);
-      cur->right();
+      rendr.delChar(cur.x * 8, cur.y * 16, 0x00000000);
+      cur.right();
       rendr.printChar('_', 0xffffffff);
-      cur->left();
+      cur.left();
     }
     mod = false;
     return;
@@ -94,29 +94,29 @@ void handleKeyBoard(uint8_t scancode) {
       rightShiftDown = false;
       break;
     case Enter:
-      rendr.delChar(cur->x * 8, cur->y * 16, 0x00000000);
-      cur->newLine();
+      rendr.delChar(cur.x * 8, cur.y * 16, 0x00000000);
+      cur.newLine();
       rendr.printChar('_', 0xffffffff);
-      cur->left();
+      cur.left();
       return;
     case BackSpace:
-      rendr.delChar(cur->x * 8, cur->y * 16, 0x00000000);
-      cur->back();
-      rendr.delChar(cur->x * 8, cur->y * 16, 0x00000000);
+      rendr.delChar(cur.x * 8, cur.y * 16, 0x00000000);
+      cur.back();
+      rendr.delChar(cur.x * 8, cur.y * 16, 0x00000000);
       rendr.printChar('_', 0xffffffff);
-      cur->left();
+      cur.left();
       return;
     case Spacebar:
-      rendr.delChar(cur->x * 8, cur->y * 16, 0x00000000);
-      cur->right();
+      rendr.delChar(cur.x * 8, cur.y * 16, 0x00000000);
+      cur.right();
       rendr.printChar('_', 0xffffffff);
-      cur->left();
+      cur.left();
       return;
   }
 
   if (lookup(scancode, leftShiftDown | rightShiftDown) == 0) return;
-  rendr.delChar(cur->x * 8, cur->y * 16, 0x00000000);
+  rendr.delChar(cur.x * 8, cur.y * 16, 0x00000000);
   rendr.printChar(lookup(scancode, leftShiftDown | rightShiftDown), 0xffffffff);
   rendr.printChar('_', 0xffffffff);
-  cur->left();
+  cur.left();
 }*/

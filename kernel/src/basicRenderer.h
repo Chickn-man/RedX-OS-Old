@@ -34,7 +34,10 @@ struct cursor {
   void down();
   void left();
   void right();
+  void move(uint32_t x, uint32_t y);
 };
+
+extern const uint8_t mCurBitmap[32];
 
 class basicRenderer {
   public:
@@ -46,6 +49,7 @@ class basicRenderer {
   void cls();
   void fill(uint32_t color);
   void printChar(char chr, unsigned int x, unsigned int y, unsigned int color);
+  void drawMouse(unsigned int x, unsigned int y, uint32_t color);
   void printChar(char chr, unsigned int color);
   void putChar(char chr, unsigned int color);
   void delChar(unsigned int x, unsigned int y, unsigned int color);
@@ -55,4 +59,4 @@ class basicRenderer {
 };
 
 extern basicRenderer basicRender;
-extern cursor* cur;
+extern cursor cur;

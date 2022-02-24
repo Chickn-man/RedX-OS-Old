@@ -41,7 +41,13 @@ struct interruptFrame;
 __attribute__((interrupt)) void pageFaultHandler(struct interruptFrame* frame);
 __attribute__((interrupt)) void doubleFaultHandler(struct interruptFrame* frame);
 __attribute__((interrupt)) void genProcFaultHandler(struct interruptFrame* frame);
+extern uint8_t scancode;
 __attribute__((interrupt)) void keyboardHandler(struct interruptFrame* frame);
+extern uint8_t mData;
+__attribute__((interrupt)) void mouseHandler(struct interruptFrame* frame);
+
+extern IDTR idtr;
+void setGate(void* handler, uint8_t offset, uint8_t type_attr, uint8_t selector);
 
 void remapPIC();
 void endMaster();

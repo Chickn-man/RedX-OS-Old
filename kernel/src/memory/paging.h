@@ -1,21 +1,32 @@
 #pragma once
 #include <stdint.h>
 #include "memory.h"
+#include "../basicRenderer.h"
+#include "../string.h"
 
 extern uint8_t __stack_chk_fail;
 
+enum PTF {
+  P = 0,
+  RW = 1,
+  US = 2,
+  WT = 3,
+  CD = 4,
+  A = 5,
+  LP = 7,
+  AV0 = 9,
+  AV1 = 10,
+  AV2 = 11,
+  nx = 63
+};
+
+
 struct dirEntry {
-  bool P : 1; // present
-  bool RW : 1; // read/write
-  bool US : 1;  // user/super
-  bool WT : 1; // write though
-  bool CD : 1; // cache disabled
-  bool A : 1; // accessed
-  bool I0 : 1; // ignore 0
-  bool LP : 1; // larger pages
-  bool I1 : 1; // ignore 1
-  uint8_t AV : 3; // availible
-  uint64_t AD : 52; // address
+  uint64_t V;
+  void set(PTF flag, bool B);
+  bool get(PTF flag);
+  void setAddr(uint64_t address);
+  uint64_t getAddr();
 };
 
 struct table {

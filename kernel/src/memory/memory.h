@@ -1,6 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include "../math.h"
+#include "../basicRenderer.h"
 
 struct EFI_MEMORY_DESCRIPTOR {
   uint32_t type;
@@ -14,6 +15,7 @@ extern const char* EFI_MEMORY_TYPE_STRINGS[];
 
 uint64_t getMemorySize(EFI_MEMORY_DESCRIPTOR* map, uint64_t mapEntries, uint64_t descSize);
 void set(void* A, uint8_t V, uint64_t C);
+void* pageAlign(void* addr);
 
 class pageAllocator {
   public:
